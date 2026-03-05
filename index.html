@@ -1,0 +1,817 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simple ESS</title>
+  <style>
+    :root {
+      --primary: #0e3d73;
+      --primary-soft: #e9f1ff;
+      --ink: #1f2a3a;
+      --muted: #64748b;
+      --bg: #f3f6fb;
+      --card: #ffffff;
+      --line: #d9e3f1;
+      --ok: #158a53;
+      --warn: #9b6d00;
+      --bad: #aa1f43;
+      --shadow: 0 10px 24px rgba(14, 61, 115, 0.09);
+      --radius: 12px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+      background: radial-gradient(circle at top right, #ebf2ff 0%, var(--bg) 35%, #eef3fb 100%);
+      color: var(--ink);
+    }
+
+    .hidden { display: none !important; }
+
+    .auth {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .auth .card {
+      width: min(460px, 100%);
+      padding: 24px;
+    }
+
+    .auth h1 {
+      margin: 0;
+      font-size: 25px;
+      color: var(--primary);
+      letter-spacing: 0.2px;
+    }
+
+    .auth p {
+      margin: 8px 0 16px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      color: #475569;
+      margin-top: 6px;
+    }
+
+    input, select, button, textarea {
+      width: 100%;
+      font: inherit;
+      border: 1px solid #c7d5eb;
+      border-radius: 10px;
+      padding: 10px 11px;
+      margin-top: 6px;
+      margin-bottom: 10px;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: 2px solid #bcd4ff;
+      border-color: #8db3f2;
+    }
+
+    button {
+      border: none;
+      cursor: pointer;
+      background: var(--primary);
+      color: #fff;
+      font-weight: 600;
+      transition: transform 0.05s ease, opacity 0.2s ease;
+    }
+
+    button:hover { opacity: 0.94; }
+    button:active { transform: translateY(1px); }
+
+    button.ghost {
+      background: #f5f8ff;
+      color: var(--primary);
+      border: 1px solid #c8d8f1;
+    }
+
+    .layout {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 250px 1fr;
+    }
+
+    .sidebar {
+      background: linear-gradient(180deg, #0f3d71 0%, #0a2e57 100%);
+      color: #fff;
+      padding: 14px;
+      border-right: 1px solid rgba(255, 255, 255, 0.16);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .sidebar h2 {
+      margin: 6px 0 4px;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .sidebar .small {
+      color: rgba(255, 255, 255, 0.85);
+      margin: 0 0 10px;
+      font-size: 12px;
+    }
+
+    .sidebar button {
+      text-align: left;
+      background: rgba(255, 255, 255, 0.13);
+      color: #fff;
+      margin-bottom: 0;
+      font-weight: 500;
+    }
+
+    .sidebar button.active { background: rgba(255, 255, 255, 0.28); }
+
+    .content {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 12px 14px;
+    }
+
+    .top h3 {
+      margin: 0;
+      color: var(--primary);
+      font-size: 20px;
+    }
+
+    .top .meta {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 3px;
+    }
+
+    .top-right {
+      text-align: right;
+      font-size: 13px;
+      color: #334155;
+      font-weight: 600;
+    }
+
+    .view {
+      display: block;
+      animation: fade 0.16s ease;
+    }
+
+    @keyframes fade {
+      from { opacity: 0.25; transform: translateY(3px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .stat {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px;
+      box-shadow: var(--shadow);
+    }
+
+    .stat .label { color: var(--muted); font-size: 12px; }
+    .stat .value { margin-top: 6px; font-size: 22px; color: var(--primary); font-weight: 700; }
+
+    .grid {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    th, td {
+      border-bottom: 1px solid #e7edf7;
+      padding: 9px;
+      text-align: left;
+      font-size: 13px;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f7faff;
+      color: #4b617f;
+      font-weight: 600;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
+
+    .PENDING { background: #fff4d8; color: var(--warn); }
+    .APPROVED { background: #dcf7ea; color: var(--ok); }
+    .REJECTED { background: #ffe2e8; color: var(--bad); }
+
+    .row-actions {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .row-actions button {
+      margin: 0;
+      padding: 6px 9px;
+      font-size: 12px;
+      border-radius: 8px;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 13px;
+      margin: 4px 0 0;
+      line-height: 1.4;
+    }
+
+    .help {
+      margin-top: 8px;
+      background: var(--primary-soft);
+      border: 1px solid #d2e2ff;
+      color: #204a80;
+      font-size: 12px;
+      border-radius: 8px;
+      padding: 8px;
+    }
+
+    @media (max-width: 1020px) {
+      .grid, .stats { grid-template-columns: 1fr; }
+      .layout { grid-template-columns: 1fr; }
+      .sidebar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+      .sidebar button { text-align: center; }
+      .top { flex-direction: column; align-items: flex-start; }
+      .top-right { text-align: left; }
+    }
+  </style>
+</head>
+<body>
+  <section id="auth" class="auth">
+    <div class="card">
+      <h1>Welcome to ESS</h1>
+      <p>Sign in to manage attendance, leave requests, and monthly attendance reports.</p>
+      <form id="loginForm">
+        <label for="loginId">Employee ID</label>
+        <input id="loginId" required />
+        <label for="loginPass">Password</label>
+        <input id="loginPass" type="password" required />
+        <button type="submit">Sign In</button>
+      </form>
+      <div class="help">Default admin account: <b>ADMIN01 / admin0111</b></div>
+    </div>
+  </section>
+
+  <section id="app" class="layout hidden">
+    <aside class="sidebar">
+      <h2>Simple ESS</h2>
+      <p class="small">Employee Self Service</p>
+      <button class="nav active" data-view="attendanceView">Attendance</button>
+      <button class="nav" data-view="leaveView">Leave</button>
+      <button class="nav" data-view="monthlyView">Monthly Report</button>
+      <button class="nav" data-view="profileView">Profile Settings</button>
+      <button id="adminNav" class="nav hidden" data-view="adminView">Admin Panel</button>
+      <button id="logoutBtn" class="ghost">Logout</button>
+    </aside>
+
+    <main class="content">
+      <div class="top">
+        <div>
+          <h3 id="welcome"></h3>
+          <div class="meta">Track your work records and requests in one place.</div>
+        </div>
+        <div class="top-right" id="today"></div>
+      </div>
+
+      <div class="stats" id="topStats">
+        <div class="stat">
+          <div class="label">Today Status</div>
+          <div class="value" id="statStatus">-</div>
+        </div>
+        <div class="stat">
+          <div class="label">Check In</div>
+          <div class="value" id="statIn">--:--</div>
+        </div>
+        <div class="stat">
+          <div class="label">Check Out</div>
+          <div class="value" id="statOut">--:--</div>
+        </div>
+      </div>
+
+      <section id="attendanceView" class="view">
+        <div class="grid">
+          <div class="card">
+            <h4>Today Attendance</h4>
+            <div id="todayInfo" class="muted"></div>
+            <div class="row-actions" style="margin-top:12px;">
+              <button id="checkInBtn">Check In</button>
+              <button id="checkOutBtn" class="ghost">Check Out</button>
+            </div>
+          </div>
+          <div class="card">
+            <h4>Recent Attendance</h4>
+            <table>
+              <thead><tr><th>Date</th><th>In</th><th>Out</th><th>Status</th></tr></thead>
+              <tbody id="recentBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="leaveView" class="view hidden">
+        <div class="grid">
+          <div class="card">
+            <h4>Submit Leave Request</h4>
+            <form id="leaveForm">
+              <label>From Date</label>
+              <input id="leaveFrom" type="date" required />
+              <label>To Date</label>
+              <input id="leaveTo" type="date" required />
+              <label>Leave Type</label>
+              <select id="leaveType">
+                <option>Annual</option>
+                <option>Sick</option>
+                <option>Casual</option>
+              </select>
+              <label>Reason</label>
+              <textarea id="leaveReason" rows="3"></textarea>
+              <button type="submit">Submit Request</button>
+            </form>
+          </div>
+          <div class="card">
+            <h4>My Leave Requests</h4>
+            <table>
+              <thead><tr><th>From</th><th>To</th><th>Type</th><th>Status</th></tr></thead>
+              <tbody id="leaveBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="monthlyView" class="view hidden">
+        <div class="card">
+          <h4>Monthly Attendance Report</h4>
+          <div id="monthlySummary" class="muted"></div>
+          <table style="margin-top:8px;">
+            <thead><tr><th>Date</th><th>Check In</th><th>Check Out</th><th>Status</th><th>Admin Note</th></tr></thead>
+            <tbody id="monthlyBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="profileView" class="view hidden">
+        <div class="grid">
+          <div class="card">
+            <h4>Change ID and Password</h4>
+            <p class="muted">Update your login credentials. Your attendance and leave records will stay linked.</p>
+            <form id="profileForm">
+              <label>Current ID</label>
+              <input id="currentProfileId" disabled />
+              <label>New ID</label>
+              <input id="newProfileId" required />
+              <label>New Password</label>
+              <input id="newProfilePass" type="password" required />
+              <label>Confirm New Password</label>
+              <input id="confirmProfilePass" type="password" required />
+              <button type="submit">Update Credentials</button>
+            </form>
+          </div>
+          <div class="card">
+            <h4>Profile Info</h4>
+            <div id="profileInfo" class="muted"></div>
+            <div class="help" style="margin-top: 12px;">
+              Tip: After changing your ID/password, use the new credentials on next login.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="adminView" class="view hidden">
+        <div class="grid">
+          <div class="card">
+            <h4>Add Employee</h4>
+            <form id="addEmpForm">
+              <label>Employee ID</label>
+              <input id="newEmpId" required />
+              <label>Password</label>
+              <input id="newEmpPass" required />
+              <button type="submit">Add Employee</button>
+            </form>
+          </div>
+          <div class="card">
+            <h4>Pending Attendance</h4>
+            <table>
+              <thead><tr><th>Employee</th><th>Date</th><th>In</th><th>Out</th><th>Status</th><th>Action</th></tr></thead>
+              <tbody id="adminAttendanceBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:10px;">
+          <h4>Pending Leave Requests</h4>
+          <table>
+            <thead><tr><th>Employee</th><th>From</th><th>To</th><th>Type</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody id="adminLeaveBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </section>
+
+  <script>
+    const KEY = {
+      USERS: "simple_ess_users",
+      SESSION: "simple_ess_session",
+      ATT: "simple_ess_attendance",
+      LEAVE: "simple_ess_leave",
+    };
+
+    const auth = document.getElementById("auth");
+    const app = document.getElementById("app");
+
+    function load(k, f) {
+      const raw = localStorage.getItem(k);
+      if (!raw) return f;
+      try { return JSON.parse(raw); } catch { return f; }
+    }
+
+    function save(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
+
+    function today() { return new Date().toISOString().slice(0, 10); }
+
+    function now() {
+      const d = new Date();
+      return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+    }
+
+    function seed() {
+      if (load(KEY.USERS, []).length === 0) {
+        save(KEY.USERS, [
+          { id: "ADMIN01", password: "admin0111", role: "ADMIN", name: "System Admin" },
+          { id: "EMP001", password: "emp00111", role: "EMPLOYEE", name: "Employee EMP001" }
+        ]);
+      }
+      if (load(KEY.ATT, []).length === 0) save(KEY.ATT, []);
+      if (load(KEY.LEAVE, []).length === 0) save(KEY.LEAVE, []);
+    }
+
+    function session() { return load(KEY.SESSION, null); }
+    function setSession(s) { save(KEY.SESSION, s); }
+    function clearSession() { localStorage.removeItem(KEY.SESSION); }
+
+    function getAttendance(empId) {
+      const all = load(KEY.ATT, []);
+      if (!empId) return all;
+      return all.filter(r => r.employeeId === empId);
+    }
+
+    function upsertAttendance(record) {
+      const all = load(KEY.ATT, []);
+      const idx = all.findIndex(r => r.employeeId === record.employeeId && r.date === record.date);
+      if (idx === -1) all.push(record); else all[idx] = record;
+      save(KEY.ATT, all);
+    }
+
+    function switchView(id) {
+      document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+      document.getElementById(id).classList.remove('hidden');
+      document.querySelectorAll('.nav').forEach(n => n.classList.remove('active'));
+      const btn = document.querySelector('.nav[data-view="' + id + '"]');
+      if (btn) btn.classList.add('active');
+    }
+
+    function updateTopStats(user) {
+      const row = getAttendance(user.id).find(r => r.date === today());
+      document.getElementById('statStatus').textContent = row ? row.status : 'No Record';
+      document.getElementById('statIn').textContent = row && row.checkIn ? row.checkIn : '--:--';
+      document.getElementById('statOut').textContent = row && row.checkOut ? row.checkOut : '--:--';
+    }
+
+    function renderEmployeeViews(user) {
+      const todays = getAttendance(user.id).find(r => r.date === today());
+      const tInfo = document.getElementById('todayInfo');
+      if (!todays) {
+        tInfo.textContent = 'No attendance record for today yet.';
+      } else {
+        tInfo.textContent = `Date: ${todays.date} | In: ${todays.checkIn || '-'} | Out: ${todays.checkOut || '-'} | Status: ${todays.status}`;
+      }
+
+      const recent = getAttendance(user.id).slice().sort((a,b) => a.date < b.date ? 1 : -1).slice(0,10);
+      const recentBody = document.getElementById('recentBody');
+      recentBody.innerHTML = recent.length ? recent.map(r =>
+        `<tr><td>${r.date}</td><td>${r.checkIn || '-'}</td><td>${r.checkOut || '-'}</td><td><span class="badge ${r.status}">${r.status}</span></td></tr>`
+      ).join('') : '<tr><td colspan="4">No attendance records yet.</td></tr>';
+
+      const leaves = load(KEY.LEAVE, []).filter(l => l.employeeId === user.id).slice().reverse();
+      const leaveBody = document.getElementById('leaveBody');
+      leaveBody.innerHTML = leaves.length ? leaves.map(l =>
+        `<tr><td>${l.from}</td><td>${l.to}</td><td>${l.type}</td><td><span class="badge ${l.status}">${l.status}</span></td></tr>`
+      ).join('') : '<tr><td colspan="4">No leave requests submitted.</td></tr>';
+
+      renderMonthly(user.id);
+      updateTopStats(user);
+    }
+
+    function renderMonthly(empId) {
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = d.getMonth() + 1;
+      const rows = getAttendance(empId)
+        .filter(r => {
+          const dt = new Date(r.date + 'T00:00:00');
+          return dt.getFullYear() === y && (dt.getMonth() + 1) === m;
+        })
+        .sort((a,b) => a.date < b.date ? 1 : -1);
+
+      const body = document.getElementById('monthlyBody');
+      body.innerHTML = rows.length ? rows.map(r =>
+        `<tr><td>${r.date}</td><td>${r.checkIn || '-'}</td><td>${r.checkOut || '-'}</td><td><span class="badge ${r.status}">${r.status}</span></td><td>${r.adminNote || '-'}</td></tr>`
+      ).join('') : '<tr><td colspan="5">No attendance data for this month.</td></tr>';
+
+      const present = rows.filter(r => r.checkIn && r.checkOut).length;
+      const partial = rows.filter(r => r.checkIn && !r.checkOut).length;
+      const approved = rows.filter(r => r.status === 'APPROVED').length;
+      document.getElementById('monthlySummary').textContent = `Month: ${y}-${String(m).padStart(2,'0')} | Total Days Recorded: ${rows.length} | Present: ${present} | Partial: ${partial} | Approved: ${approved}`;
+    }
+
+    function renderAdmin() {
+      const att = load(KEY.ATT, []).slice().sort((a,b) => a.date < b.date ? 1 : -1);
+      const pAtt = att.filter(r => r.status === 'PENDING');
+      const b1 = document.getElementById('adminAttendanceBody');
+      b1.innerHTML = pAtt.length ? pAtt.map(r =>
+        `<tr>
+          <td>${r.employeeId}</td><td>${r.date}</td><td>${r.checkIn || '-'}</td><td>${r.checkOut || '-'}</td>
+          <td><span class="badge ${r.status}">${r.status}</span></td>
+          <td>
+            <div class="row-actions">
+              <button onclick="reviewAttendance('${r.employeeId}','${r.date}','APPROVED')">Approve</button>
+              <button class="ghost" onclick="reviewAttendance('${r.employeeId}','${r.date}','REJECTED')">Reject</button>
+            </div>
+          </td>
+        </tr>`
+      ).join('') : '<tr><td colspan="6">No pending attendance records.</td></tr>';
+
+      const leave = load(KEY.LEAVE, []).filter(l => l.status === 'PENDING').slice().reverse();
+      const b2 = document.getElementById('adminLeaveBody');
+      b2.innerHTML = leave.length ? leave.map(l =>
+        `<tr>
+          <td>${l.employeeId}</td><td>${l.from}</td><td>${l.to}</td><td>${l.type}</td>
+          <td><span class="badge ${l.status}">${l.status}</span></td>
+          <td>
+            <div class="row-actions">
+              <button onclick="reviewLeave(${l.id},'APPROVED')">Approve</button>
+              <button class="ghost" onclick="reviewLeave(${l.id},'REJECTED')">Reject</button>
+            </div>
+          </td>
+        </tr>`
+      ).join('') : '<tr><td colspan="6">No pending leave requests.</td></tr>';
+    }
+
+    function renderProfile(user) {
+      document.getElementById('currentProfileId').value = user.id;
+      document.getElementById('newProfileId').value = user.id;
+      document.getElementById('newProfilePass').value = user.password || '';
+      document.getElementById('confirmProfilePass').value = user.password || '';
+      document.getElementById('profileInfo').textContent =
+        `Name: ${user.name} | Role: ${user.role} | Current Login ID: ${user.id}`;
+    }
+
+    window.reviewAttendance = function(empId, date, status) {
+      const all = load(KEY.ATT, []);
+      const row = all.find(r => r.employeeId === empId && r.date === date);
+      if (!row) return;
+      row.status = status;
+      row.adminNote = prompt('Optional note', row.adminNote || '') || '';
+      save(KEY.ATT, all);
+      const s = session();
+      if (s) refresh(s);
+    };
+
+    window.reviewLeave = function(id, status) {
+      const all = load(KEY.LEAVE, []);
+      const row = all.find(r => r.id === id);
+      if (!row) return;
+      row.status = status;
+      save(KEY.LEAVE, all);
+      const s = session();
+      if (s) refresh(s);
+    };
+
+    function refresh(user) {
+      document.getElementById('welcome').textContent = `${user.name} (${user.role})`;
+      document.getElementById('today').textContent = `Today: ${today()}`;
+      renderEmployeeViews(user);
+      renderProfile(user);
+      if (user.role === 'ADMIN') renderAdmin();
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const id = document.getElementById('loginId').value.trim().toUpperCase();
+      const pass = document.getElementById('loginPass').value.trim();
+      const user = load(KEY.USERS, []).find(u => u.id === id && u.password === pass);
+      if (!user) { alert('Invalid login credentials.'); return; }
+      setSession(user);
+      auth.classList.add('hidden');
+      app.classList.remove('hidden');
+      document.getElementById('adminNav').classList.toggle('hidden', user.role !== 'ADMIN');
+      switchView('attendanceView');
+      refresh(user);
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', function() {
+      clearSession();
+      app.classList.add('hidden');
+      auth.classList.remove('hidden');
+    });
+
+    document.querySelectorAll('.nav').forEach(btn => {
+      btn.addEventListener('click', () => switchView(btn.dataset.view));
+    });
+
+    document.getElementById('checkInBtn').addEventListener('click', function() {
+      const user = session();
+      if (!user || user.role !== 'EMPLOYEE') return;
+      const date = today();
+      const row = getAttendance(user.id).find(r => r.date === date) || {
+        employeeId: user.id, date, checkIn: '', checkOut: '', status: 'PENDING', adminNote: ''
+      };
+      if (row.checkIn) { alert('You have already checked in today.'); return; }
+      row.checkIn = now();
+      row.status = 'PENDING';
+      row.adminNote = '';
+      upsertAttendance(row);
+      refresh(user);
+    });
+
+    document.getElementById('checkOutBtn').addEventListener('click', function() {
+      const user = session();
+      if (!user || user.role !== 'EMPLOYEE') return;
+      const row = getAttendance(user.id).find(r => r.date === today());
+      if (!row || !row.checkIn) { alert('Please check in first.'); return; }
+      if (row.checkOut) { alert('You have already checked out today.'); return; }
+      row.checkOut = now();
+      row.status = 'PENDING';
+      upsertAttendance(row);
+      refresh(user);
+    });
+
+    document.getElementById('leaveForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const user = session();
+      if (!user || user.role !== 'EMPLOYEE') return;
+      const from = document.getElementById('leaveFrom').value;
+      const to = document.getElementById('leaveTo').value;
+      if (!from || !to || from > to) { alert('Please select a valid leave date range.'); return; }
+      const all = load(KEY.LEAVE, []);
+      all.push({
+        id: Date.now(),
+        employeeId: user.id,
+        from,
+        to,
+        type: document.getElementById('leaveType').value,
+        reason: document.getElementById('leaveReason').value.trim(),
+        status: 'PENDING'
+      });
+      save(KEY.LEAVE, all);
+      e.target.reset();
+      refresh(user);
+    });
+
+    document.getElementById('addEmpForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const user = session();
+      if (!user || user.role !== 'ADMIN') return;
+      const id = document.getElementById('newEmpId').value.trim().toUpperCase();
+      const password = document.getElementById('newEmpPass').value.trim();
+      if (!id || !password) return;
+      const users = load(KEY.USERS, []);
+      if (users.some(u => u.id === id)) { alert('Employee already exists.'); return; }
+      users.push({ id, password, role: 'EMPLOYEE', name: `Employee ${id}` });
+      save(KEY.USERS, users);
+      e.target.reset();
+      alert('Employee added successfully.');
+    });
+
+    document.getElementById('profileForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const s = session();
+      if (!s) return;
+
+      const oldId = s.id;
+      const newId = document.getElementById('newProfileId').value.trim().toUpperCase();
+      const newPass = document.getElementById('newProfilePass').value.trim();
+      const confirmPass = document.getElementById('confirmProfilePass').value.trim();
+
+      if (!newId || !newPass || !confirmPass) {
+        alert('New ID, password, and confirm password are required.');
+        return;
+      }
+      if (newPass.length < 6) {
+        alert('Password must be at least 6 characters.');
+        return;
+      }
+      if (newPass !== confirmPass) {
+        alert('New password and confirm password do not match.');
+        return;
+      }
+
+      const users = load(KEY.USERS, []);
+      const currentUser = users.find(u => u.id === oldId);
+      if (!currentUser) {
+        alert('Profile not found.');
+        return;
+      }
+
+      const duplicate = users.some(u => u.id === newId && u.id !== oldId);
+      if (duplicate) {
+        alert('This ID is already in use.');
+        return;
+      }
+
+      currentUser.id = newId;
+      currentUser.password = newPass;
+
+      if (oldId !== newId) {
+        const att = load(KEY.ATT, []);
+        att.forEach(r => {
+          if (r.employeeId === oldId) r.employeeId = newId;
+        });
+        save(KEY.ATT, att);
+
+        const leaves = load(KEY.LEAVE, []);
+        leaves.forEach(l => {
+          if (l.employeeId === oldId) l.employeeId = newId;
+        });
+        save(KEY.LEAVE, leaves);
+      }
+
+      save(KEY.USERS, users);
+
+      const updatedSession = { ...s, id: newId, password: newPass };
+      setSession(updatedSession);
+      alert('Credentials updated successfully.');
+      refresh(updatedSession);
+    });
+
+    seed();
+    const s = session();
+    if (s) {
+      auth.classList.add('hidden');
+      app.classList.remove('hidden');
+      document.getElementById('adminNav').classList.toggle('hidden', s.role !== 'ADMIN');
+      switchView('attendanceView');
+      refresh(s);
+    }
+  </script>
+</body>
+</html>
